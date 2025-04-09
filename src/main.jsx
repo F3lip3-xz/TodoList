@@ -1,10 +1,17 @@
+import React from 'react';
 import ReactDOM from 'react-dom/client';
-
-/* Incorporar bs5 */
 import 'bootstrap/dist/css/bootstrap.min.css';
-/* Incorporar los iconos */
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import App from './App';
 
-import TodoList from './components/TodoList';
+// Configuración de toast (notificaciones)
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-ReactDOM.createRoot(document.getElementById('root')).render(<TodoList />);
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+    <ToastContainer position="bottom-right" autoClose={3000} />
+  </React.StrictMode>
+);
