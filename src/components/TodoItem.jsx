@@ -1,17 +1,27 @@
 import { useState } from 'react';
 import { ListGroup, Form, Button, Badge, Modal } from 'react-bootstrap';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-const TodoItem = ({ todo, toggleEstado, toggleImportante, eliminarTarea }) => {
+const TodoItem = ({ todo, toggleEstado, toggleImportante, eliminarTarea, updateTarea }) => {
     const [isHovered, setIsHovered] = useState(false);
-    const [showDeleteModal, setShowDeleteModal] = useState(false); // Estado para el modal de confirmación
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [dueDate, setDueDate] = useState(todo.fechaVencimiento ? new Date(todo.fechaVencimiento) : null);
+    const [tags, setTags] = useState(todo.tags || []);
+    const [editedTarea, setEditedTarea] = useState(todo.tarea);
     const { id, tarea, estado, fecha, importante } = todo;
 
-    // Función para confirmar la eliminación
     const handleDeleteConfirm = () => {
         eliminarTarea(id);
         setShowDeleteModal(false);
+    };
+
+    const handleSaveEdit = () => {
+        updateTarea(id, { tarea: editedTarea, fechaVencimiento: dueDate, tags });
+        setIsEditing(false);
     };
 
     return (
@@ -22,36 +32,74 @@ const TodoItem = ({ todo, toggleEstado, toggleImportante, eliminarTarea }) => {
                 onMouseLeave={() => setIsHovered(false)}
             >
                 <div className="d-flex align-items-center justify-content-between">
-                    <div className="d-flex align-items-center flex-grow-1">
-                        <Form.Check 
-                            type="checkbox"
-                            checked={estado}
-                            onChange={() => toggleEstado(id)}
-                            className={`me-3 ${importante ? 'important-check' : ''}`}
-                            id={`todo-check-${id}`}
-                        />
-                        
-                        <label 
-                            htmlFor={`todo-check-${id}`}
-                            className={`todo-text mb-0 flex-grow-1 ${estado ? 'text-muted' : ''}`}
-                        >
-                            <div className="d-flex align-items-center">
-                                {importante && (
-                                    <i className="bi bi-star-fill text-warning me-2"></i>
+                    {isEditing ? (
+                        <div className="d-flex align-items-center flex-grow-1 w-100">
+                            <Form.Control
+                                value={editedTarea}
+                                onChange={(e) => setEditedTarea(e.target.value)}
+                                className="me-3"
+                            />
+                            <DatePicker
+                                selected={dueDate}
+                                onChange={(date) => setDueDate(date)}
+                                locale={es}
+                                dateFormat="PPP"
+                                className="me-3"
+                                placeholderText="Fecha de vencimiento"
+                            />
+                            <Form.Control
+                                value={tags.join(', ')}
+                                onChange={(e) => setTags(e.target.value.split(',').map(tag => tag.trim()))}
+                                placeholder="Etiquetas (separadas por coma)"
+                                className="me-3"
+                            />
+                            <Button variant="success" onClick={handleSaveEdit} className="me-2">
+                                Guardar
+                            </Button>
+                            <Button variant="secondary" onClick={() => setIsEditing(false)}>
+                                Cancelar
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="d-flex align-items-center flex-grow-1">
+                            <Form.Check 
+                                type="checkbox"
+                                checked={estado}
+                                onChange={() => toggleEstado(id)}
+                                className={`me-3 ${importante ? 'important-check' : ''}`}
+                                id={`todo-check-${id}`}
+                            />
+                            <label 
+                                htmlFor={`todo-check-${id}`}
+                                className={`todo-text mb-0 flex-grow-1 ${estado ? 'text-muted' : ''}`}
+                                onDoubleClick={() => setIsEditing(true)}
+                            >
+                                <div className="d-flex align-items-center">
+                                    {importante && (
+                                        <i className="bi bi-star-fill text-warning me-2"></i>
+                                    )}
+                                    <span style={{ textDecoration: estado ? 'line-through' : 'none' }}>
+                                        {tarea}
+                                    </span>
+                                </div>
+                                {dueDate && (
+                                    <small className="d-block text-muted mt-1">
+                                        <i className="bi bi-calendar me-1"></i>
+                                        Vence: {format(dueDate, 'PPP', { locale: es })}
+                                    </small>
                                 )}
-                                <span style={{ textDecoration: estado ? 'line-through' : 'none' }}>
-                                    {tarea}
-                                </span>
-                            </div>
-                            
-                            {fecha && (
-                                <small className="d-block text-muted mt-1">
-                                    <i className="bi bi-calendar me-1"></i>
-                                    {format(new Date(fecha), 'PPP', { locale: es })}
-                                </small>
-                            )}
-                        </label>
-                    </div>
+                                {tags.length > 0 && (
+                                    <div className="mt-1">
+                                        {tags.map((tag, index) => (
+                                            <Badge key={index} bg="secondary" className="me-1">
+                                                {tag}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                )}
+                            </label>
+                        </div>
+                    )}
                     
                     <div className="actions d-flex align-items-center">
                         <Button 
@@ -62,12 +110,11 @@ const TodoItem = ({ todo, toggleEstado, toggleImportante, eliminarTarea }) => {
                         >
                             <i className={`bi ${importante ? 'bi-star-fill' : 'bi-star'}`}></i>
                         </Button>
-                        
-                        {isHovered && (
+                        {isHovered && !isEditing && (
                             <Button 
                                 variant="link" 
                                 className="text-danger p-1"
-                                onClick={() => setShowDeleteModal(true)} // Mostrar modal en lugar de eliminar directamente
+                                onClick={() => setShowDeleteModal(true)}
                                 title="Eliminar tarea"
                             >
                                 <i className="bi bi-trash"></i>
@@ -77,7 +124,6 @@ const TodoItem = ({ todo, toggleEstado, toggleImportante, eliminarTarea }) => {
                 </div>
             </ListGroup.Item>
 
-            {/* Modal de confirmación para eliminar tarea */}
             <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered>
                 <Modal.Header closeButton className="bg-light">
                     <Modal.Title className="fw-bold">

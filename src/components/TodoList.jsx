@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'react-toastify';
 import TodoItem from './TodoItem';
+import ProgressChart from './ProgressChart'; // Nuevo componente para el progreso
 
 const TodoList = () => {
     const [todos, setTodos] = useState([]);
@@ -13,13 +14,11 @@ const TodoList = () => {
     const tareaRef = useRef();
     const KEY = "todos-app-felipe";
 
-    // Cargar tareas al iniciar
     useEffect(() => {
         const storedTodos = JSON.parse(localStorage.getItem(KEY)) || [];
         setTodos(storedTodos);
     }, []);
 
-    // Guardar tareas cuando cambian
     useEffect(() => {
         localStorage.setItem(KEY, JSON.stringify(todos));
     }, [todos]);
@@ -27,20 +26,19 @@ const TodoList = () => {
     const agregarTarea = (e) => {
         e.preventDefault();
         const tarea = tareaRef.current.value.trim();
-        
         if (!tarea) {
             toast.warning('¡Debes escribir una tarea!');
             return;
         }
-
         const nuevaTarea = {
             id: uuidv4(),
             tarea,
             estado: false,
             fecha: new Date().toISOString(),
-            importante: false
+            importante: false,
+            fechaVencimiento: null,
+            tags: []
         };
-
         setTodos(prev => [nuevaTarea, ...prev]);
         tareaRef.current.value = '';
         toast.success('✅ Tarea agregada');
@@ -61,6 +59,12 @@ const TodoList = () => {
     const eliminarTarea = (id) => {
         setTodos(prev => prev.filter(todo => todo.id !== id));
         toast.info('🗑️ Tarea eliminada');
+    };
+
+    const updateTarea = (id, updatedData) => {
+        setTodos(prev => prev.map(todo => 
+            todo.id === id ? { ...todo, ...updatedData } : todo
+        ));
     };
 
     const eliminarCompletadas = () => {
@@ -91,7 +95,6 @@ const TodoList = () => {
 
     return (
         <div className="todo-container">
-            {/* Encabezado */}
             <div className="todo-header text-center mb-5">
                 <h1 className="display-5 fw-bold text-primary">
                     <i className="bi bi-check2-circle me-2"></i>
@@ -103,7 +106,6 @@ const TodoList = () => {
                 </Badge>
             </div>
 
-            {/* Formulario */}
             <Form onSubmit={agregarTarea} className="mb-4 p-4 bg-light rounded-3 shadow-sm">
                 <div className="d-flex gap-2">
                     <Form.Control
@@ -118,7 +120,6 @@ const TodoList = () => {
                 </div>
             </Form>
 
-            {/* Filtros */}
             <div className="d-flex justify-content-center gap-2 mb-4 flex-wrap">
                 <Button 
                     variant={filter === 'all' ? 'primary' : 'outline-primary'}
@@ -150,7 +151,6 @@ const TodoList = () => {
                 </Button>
             </div>
 
-            {/* Lista de tareas */}
             {todos.length === 0 ? (
                 <div className="text-center py-5 my-4 bg-light rounded-3">
                     <i className="bi bi-emoji-smile fs-1 text-muted"></i>
@@ -166,12 +166,14 @@ const TodoList = () => {
                             toggleEstado={toggleEstadoTarea}
                             toggleImportante={toggleImportante}
                             eliminarTarea={eliminarTarea}
+                            updateTarea={updateTarea}
                         />
                     ))}
                 </ListGroup>
             )}
 
-            {/* Estadísticas */}
+            <ProgressChart total={todos.length} completed={tareasCompletadas} />
+
             <div className="todo-stats p-3 bg-light rounded-3 d-flex justify-content-between flex-wrap">
                 <div className="stat-item">
                     <span className="text-primary fw-bold">{todos.length}</span>
@@ -191,7 +193,6 @@ const TodoList = () => {
                 </div>
             </div>
 
-            {/* Botón limpiar */}
             {tareasCompletadas > 0 && (
                 <div className="text-center mt-3">
                     <Button 
@@ -205,7 +206,6 @@ const TodoList = () => {
                 </div>
             )}
 
-            {/* Modal de confirmación */}
             <Modal show={showModal} onHide={() => setShowModal(false)} centered>
                 <Modal.Header closeButton className="bg-light">
                     <Modal.Title className="fw-bold">
